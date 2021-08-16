@@ -27,8 +27,14 @@ var fetch = require('node-fetch');
 var cheerio = require('cheerio');
 var request = require('request');
 var router  = express.Router();
+const fs = require('fs-extra');
 const am = require('ra-api');
-
+var download = function(uri, filename, callback){
+   request.head(uri, function(err, res, body){
+     console.log('content-type:', res.headers['content-type']);
+     request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+   });
+ };
 var { color, bgcolor } = require(__path + '/renz/lib/color.js');
 var { fetchJson } = require(__path + '/renz/lib/fetcher.js')
 var options = require(__path + '/renz/lib/options.js')
@@ -97,6 +103,41 @@ var len = 15
 // MULAI
 
 //TINY SHORTNER
+router.get('/textmaker/game', async (req, res, next) => {
+  var theme = req.query.theme
+  var text = req.query.text
+  var text2 = req.query.text2
+  try {
+    if (theme == 'pubg') { 
+      request.post({
+          url: "https://photooxy.com/battlegrounds/make-wallpaper-battlegrounds-logo-text-146.html",
+          headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `text_1=${text}&text_2=${text2}&login=OK`,
+      }, (e,r,b) => {
+        if (!e) {
+          $ = cheerio.load(b)
+          $(".thumbnail").find("img").each(function() {
+            h = $(this).attr("src")
+            var result = "https://photooxy.com/"+h
+            fetch(encodeURI(`https://api.imgbb.com/1/upload?expiration=120&key=761ea2d5575581057a799d14e9c78e28&image=${result}&name=abcd`))
+            .then(response => response.json())
+            .then(data => {
+              var urlnya = data.data.url
+              download(urlnya, './media/image.jpg', function(){
+                res.sendFile('./media/image.jpg', { root: __dirname })
+              });
+            })
+          })
+        }
+      })
+    } 
+  } catch (error) {
+    console.log(error)
+    res.send({status: 500, message: 'Internal Server Error'})
+  }
+})
 router.get('/tiny', async (req, res, next) => {
 var apikeyInput = req.query.apikey,
 url = req.query.url
